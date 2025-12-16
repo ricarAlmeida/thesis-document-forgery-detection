@@ -8,6 +8,7 @@ Download DocTamper following the official source/instructions from the dataset a
 
 ## 2) Expected directory structure (example)
 
+```text
 /path/to/datasets/doc-tamper/
 ├── DocTamperV1-FCD/
 │   ├── data.mdb
