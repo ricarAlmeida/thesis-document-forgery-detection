@@ -1,4 +1,4 @@
-""" Test script (HRNet-based + PEP only) """
+""" Test script (SegFormer-B2 + PEP only) """
 
 from pathlib import Path
 
@@ -14,7 +14,7 @@ from torchtools.metrics import (
 from torchtools.test import evaluate
 
 from ..doc_forgery_dataset_pep import DocForgeryDatasetPEP, Feature
-from model_pep import HRNetRunnerForPEPSegmentation
+from model_segformer_b2_pep import SegFormerB2PEPRunner
 
 
 # ----------------------------------------------------------------------
@@ -65,12 +65,8 @@ loader = DataLoader(
 # Model
 # ----------------------------------------------------------------------
 
-model = HRNetRunnerForPEPSegmentation(
-    load_path=(
-        "./weights_100/"
-        "hrnet-pep-batchnorm-q2_100_97-q3_90/"
-        "2025-12-22 16:22:07.345919-checkpoint47_fixed.pth"
-    ),
+model = SegFormerB2PEPRunner(
+    load_path="./weights_segformer_100/...",
     use_data_parallel=True,
 )
 
@@ -97,5 +93,5 @@ evaluate(
     dataloader=loader,
     metrics=metrics,
     device=device,
-    save_path="test_hrnet_based_pep_q2_97_100-q3_90_100.json",
+    save_path="test_segformer_b2_pep_q2_97_100-q3_90_100.json",
 )

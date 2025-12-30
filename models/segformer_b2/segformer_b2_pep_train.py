@@ -1,48 +1,57 @@
-""" Train script (HRNet-based + PEP only) """
+""" Train script (SegFormer-B2 + PEP only) """
 
 import argparse
+import time
+import tqdm
 from pathlib import Path
-
+from datetime import datetime
+import numpy as np
 import torch
+import torch.nn as nn
+from torch.optim import lr_scheduler
+from torch.utils.data import DataLoader
 from torch.nn.modules.loss import _Loss
 from torch.utils.tensorboard import SummaryWriter
 
-from torchtools.metrics import (
-    BinaryPrecisionMetric,
-    BinaryRecallMetric,
-    BinaryF1ScoreMetric,
-    Metrics,
-)
-from torchtools.schedulers import PowerDecayScheduler
-from torchtools.losses import DiceLoss, FocalLoss
-from torchtools.train import TrainParameters, train_fn
+from torchtools.metrics import BinaryPrecisionMetric, BinaryRecallMetric, BinaryF1ScoreMetric, Metrics  # esta bem
+from torchtools.schedulers import CosineScheduler, PowerDecayScheduler   # esta bem
+from torchtools.model import ModelRunner    # esta bem
+from torchtools.losses import DiceLoss, FocalLoss   # esta bem
+from torchtools.train import TrainParameters, train_fn   # esta bom
 
 from ..doc_forgery_dataset_pep import DocForgeryDatasetPEP, Feature
 
-from model_pep import HRNetRunnerForPEPSegmentation
+from model_hrnet_pep import HRNetRunnerForPEPSegmentation
+from model_segformer_b2_pep import SegFormerB2PEPRunner
 
 
-parser = argparse.ArgumentParser(description="Train Args (HRNet-based + PEP only)")
+parser = argparse.ArgumentParser(description='Train Args (SegFormer-B2 + PEP only)')
 
 parser.add_argument(
-    "--minQF_2",
-    type=int,
-    required=True,
-    help="Tampered document minimum compression QF",
+    '--minQF_2', 
+    type=int,  
+    required=True, 
+    help='Tampered document minimum compression QF',
 )
 parser.add_argument(
-    "--maxQF_2",
-    type=int,
-    required=True,
-    help="Tampered document maximum compression QF",
+    '--maxQF_2', 
+    type=int, 
+    required=True, 
+    help='Tampered document maximum compression QF',
 )
 parser.add_argument(
-    "--QF_3",
-    type=int,
-    required=True,
-    help="Additional compression QF",
+    '--QF_3', 
+    type=int, 
+    required=True,  
+    help='Additional compression QF',
 )
-
+parser.add_argument(
+    "--backbone",
+    type=str,
+    default="hrnet",
+    choices=["hrnet", "segformer"],
+    help="Segmentation network backbone"
+)
 parser.add_argument(
     "--images_repo",
     nargs="+",
@@ -91,19 +100,19 @@ parser.add_argument(
 parser.add_argument(
     "--save_root",
     type=str,
-    default="./weights_100",
+    default="./weights_segformer_b2_100",
     help="Model checkpoints directory path",
 )
 parser.add_argument(
     "--logger_path",
     type=str,
-    default="./train_100.log",
+    default="./train_segformer_b2_100.log",
     help="Training logs path",
 )
 parser.add_argument(
     "--tensorboard_path",
     type=str,
-    default="./runs_100",
+    default="./runs_segformer_b2_100",
     help="Tensorboard files path",
 )
 
@@ -130,7 +139,7 @@ pre_trained_weights = args.pre_trained_weights
 checkpoint = args.checkpoint
 
 
-# HRNet-based + PEP only
+# SegFormer-B2 + PEP only
 feature = Feature.PEP
 
 
@@ -138,11 +147,17 @@ feature = Feature.PEP
 # Model
 # ----------------------------------------------------------------------
 
-model = HRNetRunnerForPEPSegmentation(
-    load_path=pre_trained_weights,
-    use_data_parallel=True,
-)
-
+if args.backbone == "hrnet":
+    model = HRNetRunnerForPEPSegmentation(
+        load_path=pre_trained_weights,
+        use_data_parallel=True,
+    )
+elif args.backbone == "segformer":
+    model = SegFormerB2PEPRunner(
+        load_path=pre_trained_weights,
+        use_data_parallel=True,
+    )
+    
 
 # ----------------------------------------------------------------------
 # Dataset
@@ -162,11 +177,10 @@ dataset = DocForgeryDatasetPEP(
     seed=3,
 )
 
-# QF used for PEP recompression (PEP QF)
 dataset.QF = QF3
 
 train_parameters = TrainParameters(
-    model_name=f"hrnet-pep-batchnorm-q2_{maxQF2}_{minQF2}-q3_{QF3}",
+    model_name = f"segformer-b2-pep-batchnorm-q2_{maxQF2}_{minQF2}-q3_{QF3}",
     epochs=epochs,
     batch_size=batch_size,
     accum_batch_size=accum_batch_size,
@@ -178,12 +192,12 @@ train_parameters = TrainParameters(
 optimizer = torch.optim.SGD(
     [
         {
-            "params": filter(lambda p: p.requires_grad, model.model.parameters()),
-            "lr": lr_0,
+            'params': filter(lambda p: p.requires_grad, model.model.parameters()),
+            'lr': lr_0,
         }
     ],
     lr=lr_0,
-    momentum=0.9,
+    momentum= 0.9,
     weight_decay=0.0005,
     nesterov=False,
 )
@@ -214,10 +228,10 @@ metrics = Metrics(
 )
 
 writer = SummaryWriter(
-    Path(args.tensorboard_path)
-    / train_parameters.model_name
-    / f"h:{height}_w:{width}_epochs:{epochs}_batch:{batch_size}_lr_base:{lr_0}"
-)
+     Path(args.tensorboard_path) 
+     / train_parameters.model_name 
+     / f"h:{height}_w:{width}_epochs:{epochs}_batch:{batch_size}_lr_base:{lr_0}"
+ )
 
 if __name__ == "__main__":
     train_fn(

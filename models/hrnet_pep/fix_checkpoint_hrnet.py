@@ -13,15 +13,11 @@ import torch
 # ---------------------------------------------------------------------
 
 INPUT_CHECKPOINT = (
-    "./weights_100/"
-    "hrnet-pep-batchnorm-q2_100_97-q3_90/"
-    "2025-12-22 10:11:25.295153-checkpoint19.pth"
+    "./weights_100/..."
 )
 
 OUTPUT_CHECKPOINT = (
-    "./weights_100/"
-    "hrnet-pep-batchnorm-q2_100_97-q3_90/"
-    "2025-12-22 10:11:25.295153-checkpoint19_fixed.pth"
+    "./weights_100/..."
 )
 
 

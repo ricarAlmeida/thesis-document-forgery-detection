@@ -1,6 +1,6 @@
 """ 
 Implementation of the dataset to train and test document forgery localization models
-(HRNet-based + PEP only)
+(HRNet-based + PEP only, SegFormer-B2 + PEP only)
 """
 
 from typing import List, Tuple, Optional, Union, Callable, Iterable
@@ -34,7 +34,7 @@ class Feature(Enum):
 @dataclass
 class BlockValues:
     """
-    Image Block/Crop features values (HRNet-based + PEP only)
+    Image Block/Crop features values (HRNet-based + PEP only | SegFormer-B2 + PEP only)
 
     Attributes:
         pep: image's probabilistic error potential feature map (1xHxW)
@@ -66,9 +66,9 @@ class BlockValues:
             assert self.crop_size[1] % 8 == 0
             
 
-class DocForgeryDataset(Dataset):
+class DocForgeryDatasetPEP(Dataset):
     """
-    Dataset for HRNet-based training/testing using only PEP + mask.
+    Dataset for HRNet-based and SegFormer-B2 training/testing using only PEP + mask.
     """
 
     QF = 95  # quality factor for PEP
@@ -90,7 +90,7 @@ class DocForgeryDataset(Dataset):
     ):
         """
         Implementation of the dataset to train and test document forgery localization models
-        (HRNet-based + PEP only)
+        (HRNet-based + PEP only | SegFormer-B2 + PEP only)
 
         Attributes:
             images_repo: tampered images repositories
@@ -401,7 +401,7 @@ class DocForgeryDataset(Dataset):
         DCT_coef, qtables = utils.get_jpeg_info(image_path, dct_channels)
         DCT_coef = np.array(DCT_coef)
 
-        crop_values = DocForgeryDataset.crop_image_and_mask(
+        crop_values = DocForgeryDatasetPEP.crop_image_and_mask(
             image_path=image_path,
             mask=mask,
             crop_size=crop_size,
@@ -414,7 +414,7 @@ class DocForgeryDataset(Dataset):
         s_r, s_c = crop_values["origin"]
 
         if Feature.PEP in features:
-            t_pep = DocForgeryDataset.pep_features(
+            t_pep = DocForgeryDatasetPEP.pep_features(
                 image_path=image_path,
                 dct=DCT_coef[0],
                 qtable=qtables[0],
@@ -465,7 +465,7 @@ class DocForgeryDataset(Dataset):
         else:
             qf_pep = qf
 
-        values = DocForgeryDataset.frequency_domain_features(
+        values = DocForgeryDatasetPEP.frequency_domain_features(
             image_path=image_path,
             dct_channels=dct_channels,
             mask=mask,
@@ -495,7 +495,7 @@ class DocForgeryDataset(Dataset):
         qf: int,
     ) -> BlockValues:
 
-        return DocForgeryDataset.create_tensor(
+        return DocForgeryDatasetPEP.create_tensor(
             image_path=image_path,
             mask=mask,
             features=self.features,
