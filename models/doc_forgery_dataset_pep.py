@@ -1,6 +1,6 @@
 """ 
 Implementation of the dataset to train and test document forgery localization models
-(HRNet-based + PEP only, SegFormer-B2 + PEP only)
+(HRNet-based + PEP only, SegFormer-B2 + PEP only, MIML + PEP only)
 """
 
 from typing import List, Tuple, Optional, Union, Callable, Iterable
@@ -29,12 +29,12 @@ class Feature(Enum):
     """
     
     PEP = auto()
-
+    
 
 @dataclass
 class BlockValues:
     """
-    Image Block/Crop features values (HRNet-based + PEP only | SegFormer-B2 + PEP only)
+    Image Block/Crop features values (HRNet-based + PEP only | SegFormer-B2 + PEP only | MIML + PEP only)
 
     Attributes:
         pep: image's probabilistic error potential feature map (1xHxW)
@@ -49,7 +49,7 @@ class BlockValues:
     crop_size: Optional[Tuple[int, int]]
     origin: Optional[Tuple[int, int]] = None
     grid_crop: bool = True
-
+    
     def __post_init__(self):
 
         if self.mask is not None:
@@ -64,22 +64,22 @@ class BlockValues:
         if self.grid_crop and self.crop_size is not None:
             assert self.crop_size[0] % 8 == 0
             assert self.crop_size[1] % 8 == 0
-            
+
 
 class DocForgeryDatasetPEP(Dataset):
     """
-    Dataset for HRNet-based and SegFormer-B2 training/testing using only PEP + mask.
+    Dataset for HRNet-based, SegFormer-B2 and MIML training/testing using only PEP + mask.
     """
 
-    QF = 95  # quality factor for PEP
+    QF = 95 # quality factor for PEP
 
     def __init__(
-        self,
+        self, 
         images_repo: Iterable[Union[Path, str]],
         masks_repo: Optional[Iterable[Union[Path, str]]],
-        crop_size: Optional[Tuple[int, int]],
-        features: List[Feature],
-        grid_crop: Optional[bool] = True,
+        crop_size: Optional[Tuple[int, int]], 
+        features: List[Feature], 
+        grid_crop: Optional[bool] = True, 
         filter_func: Callable[[str], bool] = lambda x: True,
         size: Optional[int] = None,
         quality_factor: Optional[int] = None,
@@ -105,7 +105,7 @@ class DocForgeryDatasetPEP(Dataset):
                             min_quality_factor and max_quality_factor is used
             min_quality_factor: minimum possible quality factor
             max_quality_factor: maximum possible quality factor
-            original_probability: retrieve crop without tampered pixels with prob=original_probability
+            original_probability: retrieve crop without tampered pixels with   prob=original_probability
             seed: seed for random operations
         """
 
@@ -117,8 +117,8 @@ class DocForgeryDatasetPEP(Dataset):
         assert max_quality_factor >= min_quality_factor
 
         self.features = features
-        self.DCT_channels = 1  # only consider luminance DCT coefficients for PEP
-
+        self.DCT_channels = 1 # only consider the luminance DCT coefficients
+        
         self.original_probability = original_probability
         self.x_limit = norm.ppf(1 - self.original_probability)
 
@@ -134,25 +134,27 @@ class DocForgeryDatasetPEP(Dataset):
 
         assert min_quality_factor <= quality_factor <= 100
 
-        self.min_quality_factor = min_quality_factor
+        self.min_quality_factor =  min_quality_factor
         self.max_quality_factor = max_quality_factor
         self.quality_factor = quality_factor
-
+        
         self.images_repo = [
             repo if isinstance(repo, Path) else Path(repo)
             for repo in images_repo
         ]
 
-        images: List[Path] = []
+        images : List[Path]= []
         for im_repo in self.images_repo:
-            images += list(
-                p for p in im_repo.glob("*.[jpJP][npNP][egEG]")
-                if filter_func(str(p))
+            images += (
+                list(
+                    p for p in im_repo.glob("*.[jpJP][npNP][egEG]")
+                    if filter_func(str(p))
+                )
             )
 
         img_names = [str(img) for img in images]
         assert len(set(img_names)) == len(img_names)  # assert no duplicate image names
-        self.images = sorted(images, key=lambda x: str(x))
+        self.images = sorted(images, key=lambda x: str(x))  
 
         if masks_repo is not None:
             self.masks_repo = [
@@ -160,7 +162,7 @@ class DocForgeryDatasetPEP(Dataset):
                 for repo in masks_repo
             ]
 
-            masks: List[Path] = []
+            masks : List[Path] = []
             for m_repo in self.masks_repo:
                 masks += list(
                     p for p in m_repo.glob("*.png")
@@ -188,13 +190,13 @@ class DocForgeryDatasetPEP(Dataset):
                 rnd.shuffle(self.masks)
                 self.masks = self.masks[:size]
                 assert [img.stem for img in self.images] == [mask.stem for mask in self.masks]
-
+            
         self._crop_size = crop_size
         self._grid_crop = grid_crop
 
         if Feature.PEP in features:
             assert grid_crop, "PEP features require grid_crop=True"
-
+        
     def __len__(self):
         return len(self.images)
 
@@ -206,8 +208,9 @@ class DocForgeryDatasetPEP(Dataset):
         """
         Read a mask and binarize:
           - 0 -> 0 (background / original)
-          - any value > 0 -> 1 (tampered)
+          - qualquer valor > 0 -> 1 (tampered)
         """
+        
         mask = np.array(Image.open(str(path))).astype(np.int16)
         mask = (mask > 0).astype(np.int16)
         return mask
@@ -238,14 +241,14 @@ class DocForgeryDatasetPEP(Dataset):
 
         try:
             h, w, c = image.shape
-        except ValueError:  # occurs when image has not 3 channels
-            h_p, w_p = image.shape
-            image = np.repeat(image[..., np.newaxis], 3, axis=2)  # quasi-RGB
-            h, w, c = image.shape
-            assert h_p == h
-            assert w_p == w
-
-        assert c == 3  # image must have 3 channels
+        except ValueError: # occurs when image has not 3 channels
+                h_p, w_p = image.shape
+                image = np.repeat(image[..., np.newaxis], 3, axis=2)  # quasi-RGB
+                h, w, c = image.shape
+                assert h_p == h 
+                assert w_p == w
+            
+        assert c == 3 # image must have 3 channels
 
         if mask is None:
             mask = np.zeros((h, w))
@@ -257,7 +260,7 @@ class DocForgeryDatasetPEP(Dataset):
                 pass  # use entire image. No crop and no pad
 
         if crop_size is not None:
-
+            
             # Pad if crop_size is larger than image size
             if h < crop_size[0] or w < crop_size[1]:
                 # pad img_RGB
@@ -271,9 +274,9 @@ class DocForgeryDatasetPEP(Dataset):
                 mask = temp
 
             # Determine where to crop
-            h_diff = max(h - crop_size[0], 0)
+            h_diff =  max(h - crop_size[0], 0) 
             w_diff = max(w - crop_size[1], 0)
-
+            
             # Determine the position of tampered pixels
             mask_locations = np.argwhere(mask == 1)
 
@@ -302,7 +305,7 @@ class DocForgeryDatasetPEP(Dataset):
 
                     h_center = min(h_diff, max(h_center - position_noise_h, 0))
                     w_center = min(w_diff, max(w_center - position_noise_w, 0))
-
+        
             if grid_crop:
                 s_r = (h_center // 8) * 8
                 s_c = (w_center // 8) * 8
@@ -334,7 +337,7 @@ class DocForgeryDatasetPEP(Dataset):
     @staticmethod
     def pep_features(
         image_path: Path,
-        dct: np.array,
+        dct: np.array, 
         qtable: np.array,
         origin: Tuple[int, int],
         crop_size: Optional[Tuple[int, int]],
@@ -361,29 +364,30 @@ class DocForgeryDatasetPEP(Dataset):
         bdiv_grid = np.zeros(C_hat_grid.shape)
         for block_i in range(0, h, 8):
             for block_j in range(0, w, 8):
-                bdiv_grid[block_i:block_i + 8, block_j:block_j + 8] = error_potential.block_divisibility(
-                    C_hat_grid[block_i:block_i + 8, block_j:block_j + 8],
+                bdiv_grid[block_i:block_i+8, block_j:block_j+8] = error_potential.block_divisibility(
+                    C_hat_grid[block_i:block_i+8, block_j:block_j+8],
                     qtable_pep,
                 )
 
         if crop_size is not None:
             s_r, s_c = origin
-
+        
             # Pad if crop_size is larger than image size
             if h < crop_size[0] or w < crop_size[1]:
+                # Pad divisibility grid 
                 temp = np.full((max(h, crop_size[0]), max(w, crop_size[1])), 1)
                 temp[:bdiv_grid.shape[0], :bdiv_grid.shape[1]] = bdiv_grid
                 bdiv_grid = temp
-
+    
             # Crop PEP
             bdiv_grid = bdiv_grid[s_r:s_r + crop_size[0], s_c:s_c + crop_size[1]]
-
+                
         t_bdiv_grid = torch.tensor(bdiv_grid, dtype=torch.float).unsqueeze(0)
         return t_bdiv_grid
 
     @staticmethod
     def frequency_domain_features(
-        image_path: str,
+        image_path: str, 
         dct_channels: int,
         mask: Optional[np.array],
         crop_size: Optional[Tuple[int, int]],
@@ -396,7 +400,7 @@ class DocForgeryDatasetPEP(Dataset):
         """
         Retrieves image features in the frequency domain (PEP only)
         """
-
+        
         # Calculate the DCT coefficients and the quantization tables for the whole image
         DCT_coef, qtables = utils.get_jpeg_info(image_path, dct_channels)
         DCT_coef = np.array(DCT_coef)
@@ -435,11 +439,11 @@ class DocForgeryDatasetPEP(Dataset):
 
     @staticmethod
     def create_tensor(
-        image_path: str,
+        image_path: str, 
         mask: Optional[np.array],
-        features: List[Feature],
-        crop_size: Optional[Tuple[int, int]],
-        grid_crop: bool,
+        features: List[Feature], 
+        crop_size: Optional[Tuple[int, int]], 
+        grid_crop: bool, 
         x_limit: float,
         dct_channels: int,
         quality_factor: int,
@@ -465,8 +469,8 @@ class DocForgeryDatasetPEP(Dataset):
         else:
             qf_pep = qf
 
-        values = DocForgeryDatasetPEP.frequency_domain_features(
-            image_path=image_path,
+        values = DocForgeryDataset.frequency_domain_features(
+            image_path=image_path, 
             dct_channels=dct_channels,
             mask=mask,
             crop_size=crop_size,
@@ -474,6 +478,7 @@ class DocForgeryDatasetPEP(Dataset):
             features=features,
             x_limit=x_limit,
             ignore_index=ignore_index,
+            T=T,
             qf_pep=qf_pep,
         )
 
@@ -484,22 +489,22 @@ class DocForgeryDatasetPEP(Dataset):
             origin=values["origin"],
             grid_crop=values["grid_crop"],
         )
-
+          
         return block_values
 
     def _create_tensor(
-        self,
+        self, 
         image_path: str,
-        mask: Optional[np.array],
-        quality_factor: int,
+        mask: Optional[np.array], 
+        quality_factor: int, 
         qf: int,
     ) -> BlockValues:
 
-        return DocForgeryDatasetPEP.create_tensor(
+        return DocForgeryDataset.create_tensor(
             image_path=image_path,
             mask=mask,
             features=self.features,
-            crop_size=self._crop_size,
+            crop_size = self._crop_size,
             grid_crop=self._grid_crop,
             x_limit=self.x_limit,
             dct_channels=self.DCT_channels,
@@ -511,10 +516,10 @@ class DocForgeryDatasetPEP(Dataset):
 
         if self.randomize:
             self.quality_factor = np.random.randint(
-                self.min_quality_factor,
+                self.min_quality_factor, 
                 self.max_quality_factor + 1,
             )
-
+    
         if self.masks is not None:
             assert self.images[idx].stem == self.masks[idx].stem
             mask = self.read_mask(self.masks[idx])
@@ -522,9 +527,9 @@ class DocForgeryDatasetPEP(Dataset):
         else:
             mask = None
             labels_path = None
-
+        
         image_pil = Image.open(str(self.images[idx]))
-
+        
         if image_pil.format == "JPEG":
             values = self._create_tensor(
                 image_path=str(self.images[idx]),
