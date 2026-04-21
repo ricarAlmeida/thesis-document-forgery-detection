@@ -469,7 +469,7 @@ class DocForgeryDatasetPEP(Dataset):
         else:
             qf_pep = qf
 
-        values = DocForgeryDataset.frequency_domain_features(
+        values = DocForgeryDatasetPEP.frequency_domain_features(
             image_path=image_path, 
             dct_channels=dct_channels,
             mask=mask,
@@ -478,7 +478,6 @@ class DocForgeryDatasetPEP(Dataset):
             features=features,
             x_limit=x_limit,
             ignore_index=ignore_index,
-            T=T,
             qf_pep=qf_pep,
         )
 
@@ -500,7 +499,7 @@ class DocForgeryDatasetPEP(Dataset):
         qf: int,
     ) -> BlockValues:
 
-        return DocForgeryDataset.create_tensor(
+        return DocForgeryDatasetPEP.create_tensor(
             image_path=image_path,
             mask=mask,
             features=self.features,
