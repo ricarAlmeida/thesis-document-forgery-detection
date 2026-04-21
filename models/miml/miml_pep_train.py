@@ -19,11 +19,11 @@ from torchtools.model import ModelRunner
 from torchtools.losses import DiceLoss, FocalLoss
 from torchtools.train import TrainParameters, train_fn
 
-from ..doc_forgery_dataset_pep import DocForgeryDatasetPEP, Feature
+from doc_forgery_dataset_pep import DocForgeryDatasetPEP, Feature
 
-from model_hrnet_pep import HRNetRunnerForPEPSegmentation
-from model_segformer_b2_pep import SegFormerB2PEPRunner
-from model_miml_pep import MIMLPEPRunner
+from models.hrnet.model_hrnet_pep import HRNetRunnerForPEPSegmentation
+from models.segformer_b2.model_segformer_b2_pep import SegFormerB2PEPRunner
+from .model_miml_pep import MIMLPEPRunner
 
 
 parser = argparse.ArgumentParser(description='Train Args (MIML + PEP only)')
@@ -50,7 +50,7 @@ parser.add_argument(
     "--backbone",
     type=str,
     default="hrnet",
-    choices=["hrnet", "segformer", "miml"],
+    choices=["hrnet", "segformer-b2", "miml"],
     help="Segmentation network backbone"
 )
 parser.add_argument(
@@ -101,19 +101,19 @@ parser.add_argument(
 parser.add_argument(
     "--save_root",
     type=str,
-    default="./weights_miml_100",
+    default="./weights_miml_50",
     help="Model checkpoints directory path",
 )
 parser.add_argument(
     "--logger_path",
     type=str,
-    default="./train_miml_100.log",
+    default="./train_miml_50.log",
     help="Training logs path",
 )
 parser.add_argument(
     "--tensorboard_path",
     type=str,
-    default="./runs_miml_100",
+    default="./runs_miml_50",
     help="Tensorboard files path",
 )
 
@@ -153,7 +153,7 @@ if args.backbone == "hrnet":
         load_path=pre_trained_weights,
         use_data_parallel=True,
     )
-elif args.backbone == "segformer":
+elif args.backbone == "segformer-b2":
     model = SegFormerB2PEPRunner(
         load_path=pre_trained_weights,
         use_data_parallel=True,
@@ -181,7 +181,6 @@ dataset = DocForgeryDatasetPEP(
     max_quality_factor=maxQF2,
     quality_factor=None,
     original_probability=0.0,
-    T=30,
     seed=3,
 )
 
@@ -201,7 +200,7 @@ optimizer = torch.optim.SGD(
     [
         {
             'params': filter(lambda p: p.requires_grad, model.model.parameters()),
-            'lr': 0.lr_0,
+            'lr': lr_0,
         }
     ],
     lr=lr_0,

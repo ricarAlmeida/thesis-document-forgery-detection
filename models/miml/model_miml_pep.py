@@ -8,7 +8,7 @@ import torch.nn.functional as F
 
 from torchtools.model import ModelRunner, ModelOutput
 
-from model_hrnet_pep import HRNetPepEncoder
+from models.hrnet.model_hrnet_pep import HRNetPepEncoder
 
 
 class MIMLHead(nn.Module):
@@ -149,20 +149,20 @@ class MIMLPEPRunner(ModelRunner):
     """
 
     def __init__(self, load_path: Optional[str] = None, use_data_parallel: bool = True):
-        self.model_ = MIMLPepBackbone(patch_size=4, feat_dim=360)
+        model = MIMLPepBackbone(patch_size=4, feat_dim=360)
 
         if load_path is not None:
             ckpt = torch.load(load_path, map_location="cpu")
+            print("... Loading pre-trained weights.")
             state_dict = ckpt.get("state_dict", ckpt)
-
-            print("... Loading pre-trained weights (MIML PEP).")
-            self.model_.load_state_dict(state_dict)
+            model.load_state_dict(state_dict)
             print("Done.")
 
-        if use_data_parallel and torch.cuda.is_available() and torch.cuda.device_count() > 1:
+        if use_data_parallel and torch.cuda.is_available():
             n_gpus = torch.cuda.device_count()
-            print(f"[MIMLPEPRunner] Using DataParallel on {n_gpus} GPUs")
-            self.model_ = nn.DataParallel(self.model_)
+            if n_gpus > 1:
+                print(f"[MIMLPEPRunner] Using DataParallel on {n_gpus} GPUs")
+                model = nn.DataParallel(model)
 
         self.model_ = model
 
