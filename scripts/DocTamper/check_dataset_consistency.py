@@ -93,28 +93,28 @@ def main():
         for s in imgs_without_mask:
             print("  -", img_map[s])
     else:
-        print("  ✔ All images have masks.\n")
+        print("  All images have masks.\n")
 
     print("\nMasks without corresponding image (by stem):")
     if masks_without_img:
         for s in masks_without_img:
             print("  -", mask_map[s])
     else:
-        print("  ✔ All masks have images.\n")
+        print("  All masks have images.\n")
 
     print("\nZero-byte files (IMAGES):")
     if zero_size_imgs:
         for p in zero_size_imgs:
             print("  -", p)
     else:
-        print("  ✔ None.\n")
+        print("  None.\n")
 
     print("\nZero-byte files (MASKS):")
     if zero_size_masks:
         for p in zero_size_masks:
             print("  -", p)
     else:
-        print("  ✔ None.\n")
+        print("  None.\n")
 
     # Exit code: 0 OK, 2 if issues found
     issues = bool(imgs_without_mask or masks_without_img or zero_size_imgs or zero_size_masks)
