@@ -13,8 +13,8 @@ from torchtools.metrics import (
 )
 from torchtools.test import evaluate
 
-from ..doc_forgery_dataset_pep import DocForgeryDatasetPEP, Feature
-from model_segformer_b2_pep import SegFormerB2PEPRunner
+from doc_forgery_dataset_pep import DocForgeryDatasetPEP, Feature
+from .model_segformer_b2_pep import SegFormerB2PEPRunner
 
 
 # ----------------------------------------------------------------------
@@ -47,7 +47,6 @@ dataset = DocForgeryDatasetPEP(
     max_quality_factor=100,
     quality_factor=None,
     original_probability=0.0,
-    T=30,
     seed=3,
 )
 
@@ -66,7 +65,12 @@ loader = DataLoader(
 # ----------------------------------------------------------------------
 
 model = SegFormerB2PEPRunner(
-    load_path="./weights_segformer_100/...",
+    #load_path="./weights_segformer_100/...",
+    load_path=(
+        "./weights_segformer_b2_20/"
+        "segformer-b2-pep-batchnorm-q2_100_97-q3_90/"
+        "2026-04-19 12:34:37.319860-checkpoint19.pth"
+    ),
     use_data_parallel=True,
 )
 
@@ -90,8 +94,8 @@ metrics = Metrics(
 
 evaluate(
     model=model,
-    dataloader=loader,
+    loader=loader,
     metrics=metrics,
     device=device,
-    save_path="test_segformer_b2_pep_q2_97_100-q3_90_100.json",
+    save_path="test_segformer_b2_pep_20epochs_q2_97_100-q3_90_100.json",
 )

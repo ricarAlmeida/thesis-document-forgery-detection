@@ -13,16 +13,16 @@ from torch.utils.data import DataLoader
 from torch.nn.modules.loss import _Loss
 from torch.utils.tensorboard import SummaryWriter
 
-from torchtools.metrics import BinaryPrecisionMetric, BinaryRecallMetric, BinaryF1ScoreMetric, Metrics  # esta bem
-from torchtools.schedulers import CosineScheduler, PowerDecayScheduler   # esta bem
-from torchtools.model import ModelRunner    # esta bem
-from torchtools.losses import DiceLoss, FocalLoss   # esta bem
-from torchtools.train import TrainParameters, train_fn   # esta bom
+from torchtools.metrics import BinaryPrecisionMetric, BinaryRecallMetric, BinaryF1ScoreMetric, Metrics
+from torchtools.schedulers import CosineScheduler, PowerDecayScheduler
+from torchtools.model import ModelRunner
+from torchtools.losses import DiceLoss, FocalLoss
+from torchtools.train import TrainParameters, train_fn
 
-from ..doc_forgery_dataset_pep import DocForgeryDatasetPEP, Feature
+from doc_forgery_dataset_pep import DocForgeryDatasetPEP, Feature
 
-from model_hrnet_pep import HRNetRunnerForPEPSegmentation
-from model_segformer_b2_pep import SegFormerB2PEPRunner
+from models.hrnet.model_hrnet_pep import HRNetRunnerForPEPSegmentation
+from .model_segformer_b2_pep import SegFormerB2PEPRunner
 
 
 parser = argparse.ArgumentParser(description='Train Args (SegFormer-B2 + PEP only)')
@@ -49,7 +49,7 @@ parser.add_argument(
     "--backbone",
     type=str,
     default="hrnet",
-    choices=["hrnet", "segformer"],
+    choices=["hrnet", "segformer-b2"],
     help="Segmentation network backbone"
 )
 parser.add_argument(
@@ -100,19 +100,19 @@ parser.add_argument(
 parser.add_argument(
     "--save_root",
     type=str,
-    default="./weights_segformer_b2_100",
+    default="./weights_segformer_b2_20",
     help="Model checkpoints directory path",
 )
 parser.add_argument(
     "--logger_path",
     type=str,
-    default="./train_segformer_b2_100.log",
+    default="./train_segformer_b2_20.log",
     help="Training logs path",
 )
 parser.add_argument(
     "--tensorboard_path",
     type=str,
-    default="./runs_segformer_b2_100",
+    default="./runs_segformer_b2_20",
     help="Tensorboard files path",
 )
 
@@ -152,7 +152,7 @@ if args.backbone == "hrnet":
         load_path=pre_trained_weights,
         use_data_parallel=True,
     )
-elif args.backbone == "segformer":
+elif args.backbone == "segformer-b2":
     model = SegFormerB2PEPRunner(
         load_path=pre_trained_weights,
         use_data_parallel=True,
@@ -173,7 +173,6 @@ dataset = DocForgeryDatasetPEP(
     max_quality_factor=maxQF2,
     quality_factor=None,
     original_probability=0.0,
-    T=30,
     seed=3,
 )
 

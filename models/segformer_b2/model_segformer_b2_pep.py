@@ -1,6 +1,7 @@
 """ SegFormer-B2 model implementation for learning PEP features"""
 
 from typing import Optional
+from pathlib import Path
 
 import torch
 import torch.nn as nn
@@ -9,6 +10,8 @@ import torch.nn.functional as F
 from transformers import SegformerForSemanticSegmentation, SegformerConfig
 
 from torchtools.model import ModelRunner, ModelOutput
+
+from huggingface_hub import snapshot_download
 
 
 class SegFormerB2PepBackbone(nn.Module):
@@ -36,13 +39,23 @@ class SegFormerB2PepBackbone(nn.Module):
 
     def __init__(self, num_labels: int = 1):
         super().__init__()
-    
+
+        MODEL_ID = "nvidia/mit-b2"
+        HF_CACHE = Path.home() / ".cache" / "hf_models"
+        HF_CACHE.mkdir(parents=True, exist_ok=True)
+
+        model_dir = snapshot_download(
+            repo_id=MODEL_ID,
+            cache_dir=str(HF_CACHE),
+            local_files_only=False,
+        )
+
         self.segformer = SegformerForSemanticSegmentation.from_pretrained(
-            "nvidia/mit-b2",
+            model_dir,
             num_labels=num_labels,
             ignore_mismatched_sizes=True,
-            use_safetensors=True,     
-            torch_dtype=torch.float32,  
+            local_files_only=True,
+            torch_dtype=torch.float32,
         )
 
     def forward(self, pep: torch.Tensor) -> torch.Tensor:
@@ -82,20 +95,22 @@ class SegFormerB2PEPRunner(ModelRunner):
     """
 
     def __init__(self, load_path: Optional[str] = None, use_data_parallel: bool = True):
-        self.model_ = SegFormerB2PepBackbone(num_labels=1)
+        model = SegFormerB2PepBackbone(num_labels=1)
 
         if load_path is not None:
             ckpt = torch.load(load_path, map_location="cpu")
+            print("... Loading pre-trained weights.")
             state_dict = ckpt.get("state_dict", ckpt)
-
-            print("... Loading pre-trained weights (SegFormer PEP).")
-            self.model_.load_state_dict(state_dict)
+            model.load_state_dict(state_dict)
             print("Done.")
 
-        if use_data_parallel and torch.cuda.is_available() and torch.cuda.device_count() > 1:
+        if use_data_parallel and torch.cuda.is_available():
             n_gpus = torch.cuda.device_count()
-            print(f"[SegFormerB2PEPRunner] Using DataParallel on {n_gpus} GPUs")
-            self.model_ = nn.DataParallel(self.model_)
+            if n_gpus > 1:
+                print(f"[SegFormerB2PEPRunner] Using DataParallel on {n_gpus} GPUs")
+                model = nn.DataParallel(model)
+
+        self.model_ = model
 
     @property
     def model(self) -> nn.Module:
