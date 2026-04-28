@@ -64,12 +64,7 @@ loader = DataLoader(
 # ----------------------------------------------------------------------
 
 model = MIMLPEPRunner(
-    #load_path="./weights_miml_100/...",
-    load_path=(
-        "/media/generalstorage5/tmp/weights_miml_100_dt/"
-        "catnet-pep-batchnorm-q2_100_97-q3_90/"
-        "2025-12-17 07:13:01.706840-checkpoint96_fixed.pth"
-    ),
+    load_path="./weights_miml_100/...",
     use_data_parallel=True,
 )
 
@@ -96,5 +91,5 @@ evaluate(
     loader=loader,
     metrics=metrics,
     device=device,
-    save_path="test_miml_pep_100epochs_q2_97_100-q3_90_100.json",
+    save_path="test_doctamper_pep_outputs/test_miml_pep_100epochs_q2_97_100-q3_90_100.json",
 )

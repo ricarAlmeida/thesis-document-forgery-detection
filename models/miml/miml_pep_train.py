@@ -101,19 +101,19 @@ parser.add_argument(
 parser.add_argument(
     "--save_root",
     type=str,
-    default="./weights_miml_50",
+    default="./weights_miml_100",
     help="Model checkpoints directory path",
 )
 parser.add_argument(
     "--logger_path",
     type=str,
-    default="./train_miml_50.log",
+    default="./train_miml_100.log",
     help="Training logs path",
 )
 parser.add_argument(
     "--tensorboard_path",
     type=str,
-    default="./runs_miml_50",
+    default="./runs_miml_100",
     help="Tensorboard files path",
 )
 

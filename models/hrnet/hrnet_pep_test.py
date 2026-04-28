@@ -65,16 +65,7 @@ loader = DataLoader(
 # ----------------------------------------------------------------------
 
 model = HRNetRunnerForPEPSegmentation(
-    #load_path=(
-    #    "./weights_100/"
-    #    "hrnet-pep-batchnorm-q2_100_97-q3_90/"
-    #    "2025-12-22 16:22:07.345919-checkpoint47_fixed.pth"
-    #),
-    load_path=(
-        "./models/hrnet/weights_100_dt/"
-        "catnet-pep-batchnorm-q2_100_97-q3_90/"
-        "2025-12-10 16:16:53.522742-checkpoint87_fixed.pth"
-    ),
+    load_path="./weights_hrnet_100/...",
     use_data_parallel=True,
 )
 
@@ -101,5 +92,5 @@ evaluate(
     loader=loader,
     metrics=metrics,
     device=device,
-    save_path="test_hrnet_based_pep_100epochs_q2_97_100-q3_90_100.json",
+    save_path="test_doctamper_pep_outputs/test_hrnet_pep_100epochs_q2_97_100-q3_90_100.json",
 )

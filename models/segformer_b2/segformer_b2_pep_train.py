@@ -100,19 +100,19 @@ parser.add_argument(
 parser.add_argument(
     "--save_root",
     type=str,
-    default="./weights_segformer_b2_20",
+    default="./weights_segformer_b2_100",
     help="Model checkpoints directory path",
 )
 parser.add_argument(
     "--logger_path",
     type=str,
-    default="./train_segformer_b2_20.log",
+    default="./train_segformer_b2_100.log",
     help="Training logs path",
 )
 parser.add_argument(
     "--tensorboard_path",
     type=str,
-    default="./runs_segformer_b2_20",
+    default="./runs_segformer_b2_100",
     help="Tensorboard files path",
 )
 

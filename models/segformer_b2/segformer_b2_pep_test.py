@@ -65,12 +65,7 @@ loader = DataLoader(
 # ----------------------------------------------------------------------
 
 model = SegFormerB2PEPRunner(
-    #load_path="./weights_segformer_100/...",
-    load_path=(
-        "./weights_segformer_b2_20/"
-        "segformer-b2-pep-batchnorm-q2_100_97-q3_90/"
-        "2026-04-19 12:34:37.319860-checkpoint19.pth"
-    ),
+    load_path="./weights_segformer_b2_20/",
     use_data_parallel=True,
 )
 
@@ -97,5 +92,5 @@ evaluate(
     loader=loader,
     metrics=metrics,
     device=device,
-    save_path="test_segformer_b2_pep_20epochs_q2_97_100-q3_90_100.json",
+    save_path="test_doctamper_pep_outputs/test_segformer_b2_pep_100epochs_q2_97_100-q3_90_100.json",
 )
