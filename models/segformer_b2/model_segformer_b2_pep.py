@@ -9,7 +9,7 @@ import torch.nn.functional as F
 
 from transformers import SegformerForSemanticSegmentation, SegformerConfig
 
-from torchtools.model import ModelRunner, ModelOutput
+from models.torchtools.model import ModelRunner, ModelOutput
 
 from huggingface_hub import snapshot_download
 

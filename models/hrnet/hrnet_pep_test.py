@@ -5,16 +5,16 @@ from pathlib import Path
 import torch
 from torch.utils.data import DataLoader
 
-from torchtools.metrics import (
+from models.torchtools.metrics import (
     BinaryPrecisionMetric,
     BinaryRecallMetric,
     BinaryF1ScoreMetric,
     Metrics,
 )
-from torchtools.test import evaluate
+from models.torchtools.test import evaluate
 
-from doc_forgery_dataset_pep import DocForgeryDatasetPEP, Feature
-from .model_hrnet_pep import HRNetRunnerForPEPSegmentation
+from models.doc_forgery_dataset_pep import DocForgeryDatasetPEP, Feature
+from models.hrnet.model_hrnet_pep import HRNetRunnerForPEPSegmentation
 
 
 # ----------------------------------------------------------------------

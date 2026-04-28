@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from torchtools.model import ModelRunner, ModelOutput
+from models.torchtools.model import ModelRunner, ModelOutput
 
 from models.hrnet.model_hrnet_pep import HRNetPepEncoder
 

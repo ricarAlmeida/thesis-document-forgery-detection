@@ -18,7 +18,7 @@ import torch._utils
 import torch.nn.functional as F
 from torch.nn.modules.loss import _Loss
 
-from torchtools.model import ModelOutput, ModelRunner
+from models.torchtools.model import ModelOutput, ModelRunner
 
 
 BatchNorm2d = nn.BatchNorm2d

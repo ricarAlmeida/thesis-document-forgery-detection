@@ -5,7 +5,7 @@ from pathlib import Path
 import torch
 from torch.utils.data import DataLoader
 
-from torchtools.metrics import (
+from models.torchtools.metrics import (
     BinaryPrecisionMetric, 
     BinaryRecallMetric, 
     BinaryF1ScoreMetric, 
@@ -13,8 +13,8 @@ from torchtools.metrics import (
 )
 from torchtools.test import evaluate
 
-from doc_forgery_dataset_pep import DocForgeryDatasetPEP, Feature
-from .model_miml_pep import MIMLPEPRunner
+from models.doc_forgery_dataset_pep import DocForgeryDatasetPEP, Feature
+from models.miml.model_miml_pep import MIMLPEPRunner
 
 
 # ----------------------------------------------------------------------

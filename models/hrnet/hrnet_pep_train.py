@@ -13,13 +13,13 @@ from torchtools.metrics import (
     BinaryF1ScoreMetric,
     Metrics,
 )
-from torchtools.schedulers import PowerDecayScheduler
-from torchtools.losses import DiceLoss, FocalLoss
-from torchtools.train import TrainParameters, train_fn
+from models.torchtools.schedulers import PowerDecayScheduler
+from models.torchtools.losses import DiceLoss, FocalLoss
+from models.torchtools.train import TrainParameters, train_fn
 
-from doc_forgery_dataset_pep import DocForgeryDatasetPEP, Feature
+from models.doc_forgery_dataset_pep import DocForgeryDatasetPEP, Feature
 
-from .model_hrnet_pep import HRNetRunnerForPEPSegmentation
+from models.hrnet.model_hrnet_pep import HRNetRunnerForPEPSegmentation
 
 
 parser = argparse.ArgumentParser(description="Train Args (HRNet-based + PEP only)")

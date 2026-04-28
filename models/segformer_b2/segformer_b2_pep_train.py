@@ -13,16 +13,16 @@ from torch.utils.data import DataLoader
 from torch.nn.modules.loss import _Loss
 from torch.utils.tensorboard import SummaryWriter
 
-from torchtools.metrics import BinaryPrecisionMetric, BinaryRecallMetric, BinaryF1ScoreMetric, Metrics
-from torchtools.schedulers import CosineScheduler, PowerDecayScheduler
-from torchtools.model import ModelRunner
-from torchtools.losses import DiceLoss, FocalLoss
-from torchtools.train import TrainParameters, train_fn
+from models.torchtools.metrics import BinaryPrecisionMetric, BinaryRecallMetric, BinaryF1ScoreMetric, Metrics
+from models.torchtools.schedulers import CosineScheduler, PowerDecayScheduler
+from models.torchtools.model import ModelRunner
+from models.torchtools.losses import DiceLoss, FocalLoss
+from models.torchtools.train import TrainParameters, train_fn
 
-from doc_forgery_dataset_pep import DocForgeryDatasetPEP, Feature
+from models.doc_forgery_dataset_pep import DocForgeryDatasetPEP, Feature
 
 from models.hrnet.model_hrnet_pep import HRNetRunnerForPEPSegmentation
-from .model_segformer_b2_pep import SegFormerB2PEPRunner
+from models.segformer_b2.model_segformer_b2_pep import SegFormerB2PEPRunner
 
 
 parser = argparse.ArgumentParser(description='Train Args (SegFormer-B2 + PEP only)')
