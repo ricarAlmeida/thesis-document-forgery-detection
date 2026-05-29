@@ -121,5 +121,5 @@ evaluate(
     loader=loader,
     metrics=metrics,
     device=device,
-    save_path="./models/test_doctamper_rgb_outputs/test_hrnet_rgb_all_epochs.json",
+    save_path="./test_doctamper_rgb_outputs/test_hrnet_rgb_all_epochs.json",
 )
