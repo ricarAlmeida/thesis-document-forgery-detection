@@ -25,6 +25,10 @@ from .metrics import Metrics   # esta bem
 from .schedulers import SchedulerReference, Scheduler   # esta bem
 from .utils import train_validation_split, AverageMeter   # esta bem
 
+import torch.distributed as dist
+from torch.nn.parallel import DistributedDataParallel as DDP
+from torch.utils.data.distributed import DistributedSampler
+
 
 def get_logger(path: Path) -> logging.Logger:
     """
@@ -43,7 +47,7 @@ def get_logger(path: Path) -> logging.Logger:
 
 
 @dataclass
-class TrainParameters:s
+class TrainParameters:
     """
     Training configuration and checkpoint paths.
 
@@ -76,9 +80,7 @@ class TrainParameters:s
         self.accum_grads_steps = int(self.accum_batch_size / self.batch_size)
         
         self.save_dir = self.save_root / self.model_name
-
-        if not self.save_dir.exists():
-            self.save_dir.mkdir(parents=True, exist_ok=False)
+        self.save_dir.mkdir(parents=True, exist_ok=True)
 
         self.save_model_path = self.save_dir / f"{self.model_name}.pt"
 
@@ -108,6 +110,8 @@ def train_fn(
     metrics: Metrics,
     validation_metric: Optional[str],
     scheduler: Optional[Union[lr_scheduler.LRScheduler, Scheduler]] = None,
+    early_stopping_patience: int = 15,
+    min_delta: float = 1e-4,
     use_cpu: bool = False,
     writer: Optional[SummaryWriter] = None,
     save_checkpoint: bool = False,
@@ -147,9 +151,6 @@ def train_fn(
     if enable_gradient_checkpoint:
         model.gradient_checkpointing_enable()
 
-    if save_model:
-        torch.save(model.model, parameters.save_model_path)
-
     if parameters.logger_path is not None:
         logger = get_logger(parameters.logger_path)
     else:
@@ -158,17 +159,25 @@ def train_fn(
     if enable_gradient_checkpoint:
         model.gradient_checkpointing_enable()
     
-    if not use_cpu:
-    
-        assert torch.cuda.is_available()
-    
-        device = torch.device("cuda")
+    ddp = "LOCAL_RANK" in os.environ
 
-        if logger is not None:
-            logger.info("--- Using GPU ---")
-        
+    if ddp:
+        dist.init_process_group(backend="nccl")
+        local_rank = int(os.environ["LOCAL_RANK"])
+        rank = dist.get_rank()
+        world_size = dist.get_world_size()
+    
+        torch.cuda.set_device(local_rank)
+        device = torch.device(f"cuda:{local_rank}")
+        is_main = rank == 0
     else:
-        device = torch.device("cpu")
+        rank = 0
+        world_size = 1
+        is_main = True
+        device = torch.device("cuda" if torch.cuda.is_available() and not use_cpu else "cpu")
+
+    if is_main and save_model:
+        torch.save(model.model.state_dict(), parameters.save_model_path)
 
     train_ds, validation_ds = train_validation_split(
         dataset,
@@ -179,19 +188,51 @@ def train_fn(
         logger.info("Training Size: %s", len(train_ds))
         logger.info("Validation Size: %s", len(validation_ds))
     
-    train_loader = DataLoader(train_ds, batch_size=parameters.batch_size, shuffle=True)
-    validation_loader = DataLoader(validation_ds, batch_size=parameters.batch_size, shuffle=False)
+    train_sampler = DistributedSampler(
+        train_ds,
+        num_replicas=world_size,
+        rank=rank,
+        shuffle=True,
+    ) if ddp else None
+    
+    validation_sampler = DistributedSampler(
+        validation_ds,
+        num_replicas=world_size,
+        rank=rank,
+        shuffle=False,
+    ) if ddp else None
+    
+    train_loader = DataLoader(
+        train_ds,
+        batch_size=parameters.batch_size,
+        sampler=train_sampler,
+        shuffle=(train_sampler is None),
+        num_workers=8,
+        pin_memory=True,
+        persistent_workers=True,
+    )
+    
+    validation_loader = DataLoader(
+        validation_ds,
+        batch_size=parameters.batch_size,
+        sampler=validation_sampler,
+        shuffle=False,
+        num_workers=8,
+        pin_memory=True,
+        persistent_workers=True,
+    )
 
     best_val_metric = 0.0
     epoch_start = 0
-
+    epochs_no_improve = 0
+    
     if parameters.load_path is not None:
         print("Loading ...")
         ckpt = torch.load(parameters.load_path)
-
+    
         epoch_start = ckpt.get("epoch", -1) + 1
-
         best_val_metric = ckpt.get("best_val_metric", float("-inf"))
+        epochs_no_improve = ckpt.get("epochs_no_improve", 0)
 
         if "adapter_weights" in ckpt:
             model.model = PeftModel.from_pretrained(model.model, ckpt["adapter_weights"])
@@ -200,6 +241,15 @@ def train_fn(
             model.model.load_state_dict(ckpt["state_dict"])
 
         model.model.to(device)
+
+        if ddp:
+            model.model_ = DDP(
+                model.model,
+                device_ids=[local_rank],
+                output_device=local_rank,
+                find_unused_parameters=False,
+            )
+        
         metrics.to(device)
         optimizer.load_state_dict(ckpt["optimizer"])
         print("Done.")
@@ -210,6 +260,15 @@ def train_fn(
 
             
         model.model.to(device)
+
+        if ddp:
+            model.model_ = DDP(
+                model.model,
+                device_ids=[local_rank],
+                output_device=local_rank,
+                find_unused_parameters=False,
+            )
+        
         metrics.to(device)
 
     trainable_params = sum(
@@ -232,9 +291,21 @@ def train_fn(
     checkpoint_id = 0
     for epoch in range(epoch_start, epoch_end):
 
-        if save_checkpoint:
+        if ddp:
+            train_sampler.set_epoch(epoch)
+
+        if is_main and save_checkpoint:
             if peft_config is None:
-                state = {'epoch': epoch - 1, 'state_dict': model.model.state_dict(), 'optimizer': optimizer.state_dict()}
+                state_dict = model.model.module.state_dict() if ddp else model.model.state_dict()
+        
+                state = {
+                    "epoch": epoch - 1,
+                    "state_dict": state_dict,
+                    "optimizer": optimizer.state_dict(),
+                    "best_val_metric": best_val_metric,
+                    "epochs_no_improve": epochs_no_improve,
+                }
+                
                 torch.save(state, parameters.save_path())
             else:
                 adapter_weights_path = parameters.save_dir / f"peft-adapters-weights / checkpoint-{checkpoint_id}"
@@ -254,7 +325,7 @@ def train_fn(
         if logger is not None:
             logger.info("Epoch %s", epoch)
 
-        for batch_idx, batch in tqdm(enumerate(train_loader)):
+        for batch_idx, batch in tqdm(enumerate(train_loader), total=len(train_loader), disable=not is_main):
 
             if scheduler is not None:
                 
@@ -280,7 +351,7 @@ def train_fn(
                         for param_group in optimizer.param_groups:
                             param_group['lr'] = lr
 
-                    if writer:
+                    if is_main and writer:
                         writer.add_scalar(
                             'Learning Rate',
                             lr,
@@ -300,7 +371,7 @@ def train_fn(
                         scheduler.step()
 
 
-                    if writer:
+                    if is_main and writer:
                         writer.add_scalar(
                             'Learning Rate',
                             optimizer.param_groups[0]["lr"],
@@ -342,7 +413,7 @@ def train_fn(
                             )
                         )
 
-                    if writer:
+                    if is_main and writer:
                         writer.add_scalar(
                             'Running Training Loss',
                             running_train_loss.avg,
@@ -359,7 +430,7 @@ def train_fn(
 
         t_epoch = time.time() - t_epoch_start
 
-        if writer:
+        if is_main and writer:
             writer.add_scalar(
                 'Training Loss',
                 avg_train_loss,
@@ -414,7 +485,7 @@ def train_fn(
             
             metrics_evaluations = metrics.evaluate()
 
-            if writer:
+            if is_main and writer:
                 writer.add_scalar(
                     'Validation Loss',
                     avg_val_loss,
@@ -436,31 +507,69 @@ def train_fn(
     
                 logger.info(logger_val_str)
 
-        if save_best_model:
+        if is_main and save_best_model:
             if metrics_evaluations:
                 val_metric_reference = metrics_evaluations[validation_metric]
             else:
                 val_metric_reference = avg_val_loss
-                
-            if val_metric_reference > best_val_metric:  
+        
+            if val_metric_reference > best_val_metric + min_delta:
                 if peft_config is None:
+                    state_dict = model.model.state_dict()
+        
                     state = {
-                        'epoch': epoch, 
-                        'state_dict': model.model.state_dict(), 
-                        'optimizer': optimizer.state_dict(),
-                        'best_val_metric': best_val_metric,
+                        "epoch": epoch,
+                        "state_dict": state_dict,
+                        "optimizer": optimizer.state_dict(),
+                        "best_val_metric": val_metric_reference,
+                        "epochs_no_improve": 0,
                     }
                 else:
-                    adapter_weights_path = parameters.save_dir / f"peft-adapters-weights / best-checkpoint"
+                    adapter_weights_path = parameters.save_dir / "peft-adapters-weights/best-checkpoint"
                     model.model.save_pretrained(adapter_weights_path)
-                    state = {'epoch': epoch - 1, 'adapter_weights': adapter_weights_path, 'optimizer': optimizer.state_dict()}
-                    
+        
+                    state = {
+                        "epoch": epoch,
+                        "adapter_weights": adapter_weights_path,
+                        "optimizer": optimizer.state_dict(),
+                        "best_val_metric": val_metric_reference,
+                        "epochs_no_improve": 0,
+                    }
+        
                 torch.save(state, parameters.save_path(epoch))
-                
+        
                 best_val_metric = val_metric_reference
-    
+                epochs_no_improve = 0
+        
                 if logger is not None:
-                    logger.info('[save] Best Model saved at epoch:{} ============================='.format(epoch))
+                    logger.info(
+                        "[save] Best Model saved at epoch:{} best_val_metric:{:.6f}".format(
+                            epoch,
+                            best_val_metric,
+                        )
+                    )
+            else:
+                epochs_no_improve += 1
+        
+                if logger is not None:
+                    logger.info(
+                        "[early-stop] no improvement {}/{}".format(
+                            epochs_no_improve,
+                            early_stopping_patience,
+                        )
+                    )
+        
+            if epochs_no_improve >= early_stopping_patience:
+                if logger is not None:
+                    logger.info(
+                        "[early-stop] stopping at epoch:{} best_val_metric:{:.6f}".format(
+                            epoch,
+                            best_val_metric,
+                        )
+                    )
+                break
 
-    if writer:
+    if is_main and writer:
         writer.close()
+    if ddp:
+        dist.destroy_process_group()
