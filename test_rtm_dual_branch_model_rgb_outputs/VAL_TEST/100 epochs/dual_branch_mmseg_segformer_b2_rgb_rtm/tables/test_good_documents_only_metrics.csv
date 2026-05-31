@@ -1,0 +1,2 @@
+threshold,n_good,Acc_good,FPR_good,Specificity_good,FP_good,TN_good
+0.5,300,0.5499999999816666,0.449999999985,0.5499999999816666,135,165
