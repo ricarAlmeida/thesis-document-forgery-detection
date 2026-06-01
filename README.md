@@ -1,10 +1,32 @@
 # Thesis: Document Forgery Detection
 
-This repository contains the code developed for a thesis project on **document forgery detection and localization**.
+This repository contains the code developed for a master's thesis on **document forgery detection and localization**, with a particular focus on document-level manipulation detection in realistic document verification scenarios.
 
-The project focuses on pixel-level localization of manipulated regions in document images using deep learning models and forensic image representations. The main experimental direction uses **RGB**, **ELA**, auxiliary channels, and combinations of these inputs, especially with SegFormer-based architectures and the RTM dataset.
+The work investigates deep learning approaches for detecting manipulated document images and localizing tampered regions. The main experimental pipeline is based on **SegFormer-B2**, including segmentation-only models, an MMSEG-based implementation, an image-level classification variant, and a final **dual-branch architecture** that combines pixel-level localization with document-level classification.
 
-The repository also contains exploratory code for **PEP** experiments. PEP support was implemented during development, but it was not selected as a main thesis direction because it is less established in the literature for this specific setting, unlike ELA, which is a well-known forensic representation in image forensics.
+---
+
+## Overview
+
+The project explores the following main directions:
+
+- Initial comparison between **HRNet**, **SegFormer-B2**, and **MiML** on DocTamper using RGB input;
+- Evaluation of different input representations on the RTM dataset:
+  - RGB;
+  - Error Level Analysis (ELA);
+  - High-pass filtering;
+  - Edge-based information;
+  - combinations of these representations;
+- Comparison between Hugging Face and MMSEG implementations of SegFormer-B2;
+- Image-level classification with an MMSEG-based SegFormer-B2 backbone;
+- Dual-branch SegFormer-B2 models for joint segmentation and document-level classification;
+- Image-only training of the dual-branch architecture to compare against the standalone MMSEG classification head and the full dual-branch model;
+- Convolutional refinement in the image-level branch.
+
+The final model uses a shared SegFormer-B2 encoder with two branches:
+
+1. a segmentation branch for pixel-level manipulation localization;
+2. an image-level branch for document-level tampering detection.
 
 ---
 
@@ -135,6 +157,17 @@ These channels provide complementary spatial information to the model. They are 
 
 In this repository, variants marked with `2aux` use these two auxiliary channels together with the main input representation.
 
+### Multiple Input Combinations
+
+The RTM experiments evaluate several input configurations, including:
+
+- RGB;
+- ELA;
+- RGB + 2aux;
+- ELA + 2aux;
+- RGB + ELA;
+- RGB + ELA + 2aux.
+
 ### PEP
 
 PEP stands for **Probabilistic Error Potential**.
@@ -144,19 +177,6 @@ PEP was implemented as an experimental input representation based on JPEG compre
 However, PEP was not selected as one of the main experimental directions in the final thesis workflow. The main reason is that PEP is a more exploratory representation in this context and has less direct literature support for the selected datasets and experimental setup. In contrast, ELA is a better-known forensic representation and is easier to justify with existing work.
 
 Therefore, PEP-related code is kept in the repository for completeness and future experimentation, but the main experimental focus is on RGB, ELA, auxiliary channels, and their combinations.
-
-### Multiple Input Combinations
-
-The experiments with SegFormer on the RTM dataset, explore different input configurations, such as:
-
-- RGB only
-- ELA only
-- RGB + auxiliary channels
-- ELA + auxiliary channels
-- RGB + ELA
-- RGB + ELA + auxiliary channels
-
-PEP-based combinations may exist in the codebase, but they should be considered exploratory rather than part of the main reported experimental setup.
 
 ---
 
@@ -179,13 +199,9 @@ SegFormer-based models are used for the main segmentation experiments, especiall
 
 Implemented variants include:
 
-- SegFormer with RGB input (DocTamper and RTM datasets)
-- SegFormer with PEP input support (DocTamper and RTM datasets)
-- SegFormer with ELA input (RTM dataset)
-- SegFormer with auxiliary channels (RTM dataset)
-- SegFormer with several input combinations (RTM dataset)
-- SegFormer with classification head (RTM dataset)
-- SegFormer in a dual-branch model (with and without convolutional layers) (RTM dataset)
+- Hugging Face SegFormer-B2 with multiple input combinations;
+- MMSEG-based SegFormer-B2 using RGB as input;
+- MMSEG-based SegFormer-B2 with image-level classification head.
 
 ### MIML
 
@@ -195,6 +211,28 @@ Implemented variants include:
 
 - MIML with RGB input
 - MIML with PEP input support
+
+## Dual-Branch SegFormer-B2
+
+The final architecture is a dual-branch MMSEG-based SegFormer-B2 model with convolutional refinement.
+
+It contains:
+
+- a shared MiT-B2 encoder;
+- a segmentation branch for pixel-level localization;
+- an image-level classification branch for document-level prediction.
+
+Implemented variants include:
+
+- dual-branch model without convolutional refinement;
+- dual-branch model with convolutional refinement;
+- image-only variant using only the image-level branch.
+
+The final dual-branch architecture with convolutional refinement is illustrated below:
+
+![Final dual-branch SegFormer-B2 architecture](images/dual_branch_model.png)
+
+---
 
 ## Important Note
 
