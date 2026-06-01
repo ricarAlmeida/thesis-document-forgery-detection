@@ -230,7 +230,7 @@ Implemented variants include:
 
 The final dual-branch architecture with convolutional refinement is illustrated below:
 
-![Final dual-branch SegFormer-B2 architecture](images/dual_branch_model.png)
+![Final dual-branch SegFormer-B2 architecture](readme_images/final_model.png)
 
 ---
 
