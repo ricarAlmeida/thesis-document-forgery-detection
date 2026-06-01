@@ -68,7 +68,6 @@ parser.add_argument(
 parser.add_argument(
     "--checkpoint",
     type=str,
-    #default="./dual_branch_weights_mmseg_segformer_b2_rgb_with_convs_rtm_corretoo/dual_branch-mmseg-segformer_b2-rgb/checkpoint.pth",
     default=None,
     help="Checkpoint path to resume training from",
 )
@@ -81,19 +80,19 @@ parser.add_argument(
 parser.add_argument(
     "--save_root",
     type=str,
-    default="./dual_image_only_branch_weights_mmseg_segformer_b2_rgb_with_convs_rtm_corretoo",   # dual_branch_weights_mmseg_segformer_b2_rgb_with_convs_rtm_corretoo
+    default="./rtm_dual_image_only_branch_weights_mmseg_segformer_b2_rgb_with_convs",   # dual_branch_weights_mmseg_segformer_b2_rgb_with_convs_rtm_corretoo
     help="Directory where checkpoints and models will be saved",
 )
 parser.add_argument(
     "--logger_path",
     type=str,
-    default="./dual_image_only_branch_train_mmseg_segformer_b2_rgb_with_convs_rtm_corretoo.log",  # dual_branch_train_mmseg_segformer_b2_rgb_with_convs_rtm_corretoo
+    default="./rtm_dual_image_only_branch_train_mmseg_segformer_b2_rgb_with_convs.log",  # dual_branch_train_mmseg_segformer_b2_rgb_with_convs_rtm_corretoo
     help="Training log file path",
 )
 parser.add_argument(
     "--tensorboard_path",
     type=str,
-    default="./dual_image_only_branch_runs_mmseg_segformer_b2_rgb_with_convs_rtm_corretoo",    # dual_branch_runs_mmseg_segformer_b2_rgb_with_convs_rtm_corretoo
+    default="./rtm_dual_image_only_branch_runs_mmseg_segformer_b2_rgb_with_convs",    # dual_branch_runs_mmseg_segformer_b2_rgb_with_convs_rtm_corretoo
     help="TensorBoard output directory",
 )
 

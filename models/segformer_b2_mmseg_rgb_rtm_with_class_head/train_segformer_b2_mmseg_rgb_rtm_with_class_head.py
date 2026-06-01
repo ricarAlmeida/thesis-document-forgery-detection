@@ -78,19 +78,19 @@ parser.add_argument(
 parser.add_argument(
     "--save_root",
     type=str,
-    default="./weights_mmseg_segformer_b2_rgb_rtm_with_class_head_corretoo",
+    default="./rtm_weights_mmseg_segformer_b2_rgb_with_class_head",
     help="Directory where checkpoints and models will be saved",
 )
 parser.add_argument(
     "--logger_path",
     type=str,
-    default="./train_mmseg_segformer_b2_rgb_rtm_with_class_head_corretoo.log",
+    default="./rtm_train_mmseg_segformer_b2_rgb_with_class_head.log",
     help="Training log file path",
 )
 parser.add_argument(
     "--tensorboard_path",
     type=str,
-    default="./runs_mmseg_segformer_b2_rgb_rtm_with_class_head_corretoo",
+    default="./rtm_runs_mmseg_segformer_b2_rgb_with_class_head",
     help="TensorBoard output directory",
 )
 
